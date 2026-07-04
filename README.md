@@ -31,6 +31,143 @@ independent accounts without their data ever mixing.
 
 ---
 
+## Features in detail
+
+What follows is a walkthrough of every page as it actually behaves, in the order
+you'd naturally move through the app.
+
+### Dashboard
+
+The home screen, split into two tabs — **Medical** and **Fitness & Wellness** —
+switched with a pill toggle under the day's greeting ("Good morning" / "Good
+evening", based on the time of day). A **Log Mood** button sits top-right on
+every tab, opening the same mood picker used in Dear Diary.
+
+**Medical tab**
+- Four stat cards: **Medications Due Today** (e.g. "1" — "1 taken, 0 remaining"),
+  **Symptom Score** (the average severity across everything you're tracking, e.g.
+  "5/10"), **Upcoming Appointments**, and **Doctors on File** — this last one
+  reads the exact same doctor list you manage on the Medical page, so adding a
+  doctor there updates this count here too.
+- **Today's Medications** — every medication you've added, each with a
+  **Mark Taken** / **✓ Taken** toggle, plus an **Overall Adherence (14 days)**
+  bar underneath showing the last two weeks as a strip of days (today lights up
+  green the moment you mark something taken).
+- **Upcoming Appointments** — add one via **+ Add** (doctor name, specialty,
+  date, time). If you've set up Resend, saving one sends you a confirmation
+  email automatically.
+- **Mood This Month** — a compact calendar, today circled, filling in as you log
+  moods from here or from Dear Diary.
+- **AI Insight** — starts as a prompt ("Log some medications, symptoms, or mood
+  to unlock AI insights"); once you have real data, **Get AI Insight** calls
+  Gemini with your actual logged data and returns a short, italicized,
+  personalised note — e.g. *"It's great to see you're consistently taking your
+  vitamin D! To help manage your nausea, consider increasing your water intake
+  and monitoring any patterns with your symptoms throughout the day."*
+- **Quick Actions** — one-tap shortcuts to Log Symptom, Write Diary, AI Chat,
+  and Upload Doc.
+
+**Fitness & Wellness tab** swaps the four stat cards for **Calories Burned**,
+**Steps Today**, **Sleep Quality**, and **Water Intake**, and the main column for
+**Today's Workout**, **Nutrition** (macro bars), and **Last Night's Sleep** — the
+Mood calendar and AI Insight sidebar stay the same.
+
+### Medical Centre
+
+Three tabs: **Medications**, **Charts**, **Doctors**.
+
+- **Medications** — **+ Add Medication** captures a name, dosage, frequency, and
+  time. Each medication gets its own card with a **Taken today** / **Pending**
+  toggle and a **14-Day Adherence** bar.
+- **Charts** —
+  - **Daily Adherence (Last 14 Days)**: a bar chart of what % of your
+    medications you took each day.
+  - **Symptom Severity Trend**: a line chart plotting the average severity from
+    every day you've saved a symptom log — it stays empty until you save your
+    first one from the Symptoms page.
+  - **Blood Sugar Levels**: a manual log (**Log Reading** → fasting / post-meal
+    mg/dL) plotted as a line chart once you have readings.
+- **Doctors** — **+ Add Doctor** captures name, specialty, hospital, phone, and
+  email. Cards show a colored initial avatar and tappable `tel:`/`mailto:` links
+  for the phone and email.
+
+### Health & Fitness
+
+Four stat cards up top (Calories Burned, Steps Today, Sleep Last Night, Water),
+then:
+
+- **Weekly Steps** — a 7-day bar chart with an inline "Log today's steps" field
+  right in the card header.
+- **Workout History** — everything you've logged (name, date, duration,
+  calories), with **+ Log Workout** to add one.
+- **Today's Nutrition** — four circular progress rings (Calories / Protein /
+  Carbs / Fat) against your daily targets, filled in via **Log** / **Update**.
+- **Water Intake** — an 8-glass grid; tap any glass to set today's count (tap
+  glass 6 and it registers "6 of 8", not just +1).
+- **Last Night's Sleep** — total hours, a quality %, and a Deep/Light/REM/Awake
+  stage breakdown, editable via **Log** / **Edit**.
+- **Weekly Goals** — progress bars for Workouts, Avg Steps, and Avg Sleep against
+  your targets for the week.
+
+### Symptom Tracker
+
+Two tabs: **Daily Log** and **History**.
+
+- **Daily Log** — every symptom you're tracking gets its own labeled 0–10
+  severity slider (e.g. "Nausea — 5/10 — Moderate"). **+ Add Symptom** offers a
+  suggested list (Headache, Fatigue, Joint Pain, …) or a custom entry.
+  **Save Today's Log** persists the day and feeds the Symptom Severity Trend
+  chart on the Medical page.
+- **History** — a color-coded heatmap, one cell per day you've saved, so
+  patterns across weeks are visible at a glance.
+
+### Dear Diary
+
+Two tabs: **Write** and **History**.
+
+- **Write** — pick a mood from six options (Great, Good, Okay, Low, Bad, Awful),
+  write freely in the text area, optionally tag what's contributing
+  ("Grateful", "Anxious", "Stressed", …), then **Save Entry**.
+- The sidebar tracks **This Week's Mood** (a bar per mood type showing how many
+  times you logged it in the last 7 days) and your **Streak** — consecutive
+  days journalled in a row.
+- **History** lists every past entry with its mood emoji, date, content, and
+  tags.
+
+### AI Health Chat
+
+A free-form chat, grounded in your real data rather than giving generic advice.
+For example, asking *"tell me about my height weight age and how it's related to
+my medicine intake, exercise, and sleep"* produced a response that correctly
+referenced the real profile on file (50 years old, 180cm, 80kg), calculated a
+real BMI from it (~24.7), and named the actual medication logged (Vitamin D
+500mg) — because the request handler passes your live profile and medication
+list into the prompt rather than answering blind (see the **Cognee** section
+below for how it also draws on longer-term memory).
+
+### Documents
+
+A drag-and-drop zone (or click to browse) for PDF, JPG, PNG, or DOC files up to
+10MB. Uploaded files are listed below with their type, size, and upload date.
+
+### Profile & Settings
+
+- **Profile** — Full Name, Email, Age, Sex, Height, Weight, and "I use Memoir
+  for" (Medical / Fitness / Both).
+- **Notifications** — toggles for Medication Reminders, AI Insights, Workout
+  Reminders, and Diary Prompts.
+- **Privacy & Security**:
+  - **Data Encryption** — status badge, always shown as Active.
+  - **Product Tour** — **Retake** replays the guided walkthrough of the app's
+    features from scratch, in case you skipped it or want a refresher.
+  - **Export Data** — **Download** saves everything in your account as a single
+    JSON file.
+  - **Delete Account** — **Delete** permanently wipes this account's data after
+    a confirmation prompt; it cannot be undone.
+- **Sign Out** and **Save Changes** sit at the bottom.
+
+---
+
 ## Tech stack
 
 - **Next.js 16** (App Router, Turbopack) + React 19 + TypeScript

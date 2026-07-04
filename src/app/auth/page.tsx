@@ -2,13 +2,39 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
 import WaveBackground from "@/components/WaveBackground";
 import { useLocalState } from "@/lib/useLocalState";
 import { emptyProfile, type Profile } from "@/lib/data";
 import { findAccountByEmail, registerAccount, setActiveUserId } from "@/lib/storage";
+
+interface GoogleTokenResponse {
+  access_token?: string;
+  error?: string;
+}
+
+interface GoogleTokenClient {
+  requestAccessToken: () => void;
+}
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        oauth2: {
+          initTokenClient: (config: {
+            client_id: string;
+            scope: string;
+            callback: (response: GoogleTokenResponse) => void;
+          }) => GoogleTokenClient;
+        };
+      };
+    };
+  }
+}
 
 const testimonials = [
   {
@@ -73,6 +99,8 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [, setSavedProfile] = useLocalState<Profile>("profile", emptyProfile);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleError, setGoogleError] = useState("");
 
   const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
@@ -149,8 +177,64 @@ export default function AuthPage() {
     password !== "" &&
     (mode === "signin" || name.trim() !== "");
 
+  const completeGoogleSignIn = (googleEmail: string, googleName: string) => {
+    const existing = findAccountByEmail(googleEmail);
+    if (existing) {
+      setActiveUserId(existing.userId);
+      router.push("/dashboard");
+      return;
+    }
+    const userId = registerAccount(googleEmail, googleName);
+    setActiveUserId(userId);
+    setSavedProfile((prev) => ({ ...prev, name: googleName, email: googleEmail }));
+    router.push("/onboarding");
+  };
+
+  const handleGoogleSignIn = () => {
+    setGoogleError("");
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      setGoogleError("Google sign-in isn't configured yet.");
+      return;
+    }
+    if (!window.google) {
+      setGoogleError("Still loading Google sign-in — try again in a moment.");
+      return;
+    }
+
+    setGoogleLoading(true);
+    const client = window.google.accounts.oauth2.initTokenClient({
+      client_id: clientId,
+      scope: "openid email profile",
+      callback: async (response) => {
+        if (response.error || !response.access_token) {
+          setGoogleLoading(false);
+          setGoogleError("Google sign-in was cancelled or failed.");
+          return;
+        }
+        try {
+          const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+            headers: { Authorization: `Bearer ${response.access_token}` },
+          });
+          const googleProfile = await res.json();
+          if (!googleProfile.email) {
+            setGoogleError("Couldn't read your Google profile. Please try again.");
+            return;
+          }
+          completeGoogleSignIn(googleProfile.email, googleProfile.name || googleProfile.given_name || "");
+        } catch {
+          setGoogleError("Couldn't reach Google. Please try again.");
+        } finally {
+          setGoogleLoading(false);
+        }
+      },
+    });
+    client.requestAccessToken();
+  };
+
   return (
     <div className="min-h-screen flex">
+      <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
       <WaveBackground />
 
       {/* Left panel — Brand */}
@@ -281,16 +365,25 @@ export default function AuthPage() {
                 {/* Google button */}
                 <button
                   type="button"
-                  className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border border-memoir-border bg-white text-sm font-medium text-memoir-text hover:bg-memoir-sand/20 transition-colors"
+                  onClick={handleGoogleSignIn}
+                  disabled={googleLoading}
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border border-memoir-border bg-white text-sm font-medium text-memoir-text hover:bg-memoir-sand/20 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <svg width="18" height="18" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                  </svg>
-                  Continue with Google
+                  {googleLoading ? (
+                    <Loader2 size={16} className="animate-spin text-memoir-text-muted" />
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                  )}
+                  {googleLoading ? "Connecting to Google…" : "Continue with Google"}
                 </button>
+                {googleError && (
+                  <p className="text-xs text-memoir-danger text-center -mt-2">{googleError}</p>
+                )}
 
                 <div className="flex items-center gap-3">
                   <div className="flex-1 h-px bg-memoir-border" />
